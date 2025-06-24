@@ -239,7 +239,8 @@ defmodule Eml.HTML.Parser do
   # Checks for empty content
   defp empty?({ :blank, _ }), do: true
   defp empty?({ :content, content }) do
-    String.trim(content) === ""
+    trim_whitespace = Application.get_env(:eml, :trim_whitespace, true)
+    if trim_whitespace, do: String.trim(content) === "", else: false
   end
   defp empty?(_), do: false
 
