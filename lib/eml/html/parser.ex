@@ -60,10 +60,10 @@ defmodule Eml.HTML.Parser do
     n = byte_size(end_token)
     case chars do
       <<^end_token::binary-size(n), rest::binary>> ->
-        acc = change(buf, acc, :cdata)
-        acc = change({ :open, "<" }, acc)
-        acc = change({ :slash, "/" }, acc)
-        acc = change({ :end_tag, end_tag }, acc)
+        acc = change(buf, acc, opts, :cdata)
+        acc = change({ :open, "<" }, acc, opts)
+        acc = change({ :slash, "/" }, acc, opts)
+        acc = change({ :end_tag, end_tag }, acc, opts)
         tokenize(rest, { :end_close, ">" }, acc, :end_close, opts)
       <<char>> <> rest ->
         consume(char, rest, buf, acc, state, opts)
@@ -157,7 +157,7 @@ defmodule Eml.HTML.Parser do
             :content ->
               next(rest, buf, ">", acc, :start_close, opts)
             { :cdata, tag } ->
-              acc = change(buf, acc)
+              acc = change(buf, acc, opts)
               next(rest, { :start_close, ">" }, "", acc, { :cdata, tag }, opts)
           end
         end
@@ -220,16 +220,16 @@ defmodule Eml.HTML.Parser do
 
   # Add the old buffer to the accumulator and start a new buffer
   defp next(rest, old_buf, new_buf, acc, new_state, opts) do
-    acc = change(old_buf, acc)
+    acc = change(old_buf, acc, opts)
     new_buf = if is_integer(new_buf), do: <<new_buf>>, else: new_buf
     tokenize(rest, { new_state, new_buf }, acc, new_state, opts)
   end
 
   # Add buffer to the accumulator if its content is not empty.
-  defp change({ type, buf }, acc, type_modifier \\ nil) do
+  defp change({ type, buf }, acc, opts, type_modifier \\ nil) when is_list(opts) do
     type = if is_nil(type_modifier), do: type, else: type_modifier
     token = { type, buf }
-    if empty?(token) do
+    if empty?(token, opts) do
       acc
     else
       [token | acc]
@@ -237,12 +237,12 @@ defmodule Eml.HTML.Parser do
   end
 
   # Checks for empty content
-  defp empty?({ :blank, _ }), do: true
-  defp empty?({ :content, content }) do
-    trim_whitespace = Application.get_env(:eml, :trim_whitespace, true)
-    if trim_whitespace, do: String.trim(content) === "", else: false
+  defp empty?({ :blank, _ }, _opts), do: true
+  defp empty?({ :content, content }, opts) do
+    if get_trim_whitespace_opt(opts), do: String.trim(content) === "", else: false
+    # String.trim(content) === ""
   end
-  defp empty?(_), do: false
+  defp empty?(_, _opts), do: false
 
   # Checks if last tokenized tag is a tag that should always close.
   defp get_last_tag(tokens, { type, buf }) do
@@ -376,8 +376,7 @@ defmodule Eml.HTML.Parser do
     end
   end
   defp finalize_content(content, _, opts) do
-    app_default = Application.get_env(:eml, :trim_whitespace, true)
-    trim_whitespace = Keyword.get(opts, :trim_whitespace, app_default)
+    trim_whitespace = get_trim_whitespace_opt(opts)
 
     case content do
       [content] when is_binary(content) ->
@@ -430,4 +429,9 @@ defmodule Eml.HTML.Parser do
   end
   defp trim_whitespace({ :cdata, noop }, _, _, _), do: noop
   defp trim_whitespace(noop, _, _, _), do: noop
+
+  defp get_trim_whitespace_opt(opts) when is_list(opts) do
+    app_default = Application.get_env(:eml, :trim_whitespace, true)
+    Keyword.get(opts, :trim_whitespace, app_default)
+  end
 end
