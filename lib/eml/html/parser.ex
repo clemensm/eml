@@ -240,7 +240,6 @@ defmodule Eml.HTML.Parser do
   defp empty?({ :blank, _ }, _opts), do: true
   defp empty?({ :content, content }, opts) do
     if get_trim_whitespace_opt(opts), do: String.trim(content) === "", else: false
-    # String.trim(content) === ""
   end
   defp empty?(_, _opts), do: false
 
