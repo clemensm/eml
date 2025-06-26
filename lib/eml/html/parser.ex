@@ -6,9 +6,13 @@ defmodule Eml.HTML.Parser do
   @spec parse(binary, Keyword.t) :: [Eml.t]
   def parse(html, opts \\ []) do
     res = tokenize(html, { :blank, [] }, [], :blank, opts) |> parse_content(opts)
+
     case res do
       { content, [] } ->
-        content
+        app_default = Application.get_env(:eml, :remove_empty_content_between_non_ldc_tags, true)
+        remove_whitespace = Keyword.get(opts, :remove_empty_content_between_non_ldc_tags, app_default)
+
+        if remove_whitespace, do: Eml.HTML.LDCSpecialParser.filter_empty_content(content), else: content
       { content, rest }->
         raise Eml.ParseError, message: "Unparsable content, parsed: #{inspect content}, rest: #{inspect rest}"
     end
