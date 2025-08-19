@@ -20,6 +20,8 @@ defmodule Eml.HTML.LDCSpecialParser do
 
     %{element | content: filtered_content}
   end
+  # CDATA needs special handling, wasn't handeld by original Eml implementation at all?
+  defp filter_element({:cdata, _} = element), do: element
 
   defp filter_content(nil), do: nil
   defp filter_content(content) when is_list(content), do: Enum.map(content, &filter_element/1)
