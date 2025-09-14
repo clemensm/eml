@@ -26,6 +26,8 @@ defmodule Eml.HTML.LDCSpecialParser do
   defp filter_content(nil), do: nil
   defp filter_content(content) when is_list(content), do: Enum.map(content, &filter_element/1)
   defp filter_content(content) when is_binary(content), do: maybe_trim_whitespace_content(content)
+  # CDATA needs special handling
+  defp filter_element({:cdata, _} = element), do: element
 
 
   defp filter_empty_content(%Eml.Element{} = prev_el, this_el, %Eml.Element{} = next_el, more_content, acc) when is_binary(this_el) do
